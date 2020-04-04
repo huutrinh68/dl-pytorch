@@ -13,7 +13,6 @@ def main():
     val_dataset = MyDataset(val_list, transform=ImageTransform(resize, mean, std), phase="val")
 
     # dataloader
-    batch_size = 4
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size, shuffle=True)
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size, shuffle=False)
     dataloader_dict = {"train":train_dataloader, "val":val_dataloader}
@@ -39,14 +38,14 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
 
     # network
-    use_pretrained = True
-    net = models.vgg16(pretrained=use_pretrained)
-    net.classifier[6] = nn.Linear(in_features=4096, out_features=2)
+    # use_pretrained = True
+    # net = models.vgg16(pretrained=use_pretrained)
+    # net.classifier[6] = nn.Linear(in_features=4096, out_features=2)
 
-    load_model(net, save_path)
+    # load_model(net, save_path)
     
 
 
