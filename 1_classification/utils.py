@@ -89,13 +89,11 @@ def params_to_update(net):
 
 
 def load_model(net, model_path):
-    load_weights = torch.load(model_path)
+    load_weights = torch.load(model_path,  map_location={"cuda:0": "cpu"})
     net.load_state_dict(load_weights)
-    # print(net)
 
+    # print(net)
     # for name, param in net.named_parameters():
     #     print(name, param)
-
-    # load_weights = torch.load(model_path, map_location=("cuda:0", "cpu"))
-    # net.load_state_dict(load_weights)
     
+    return net
