@@ -15,8 +15,15 @@ class ImageTransform():
                 transforms.CenterCrop(resize),
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)
+            ]),
+
+            'test': transforms.Compose([
+                transforms.Resize(resize),
+                transforms.ToTensor(),
+                transforms.Normalize(mean, std)
             ])
         }
     
     def __call__(self, img, phase='train'):
         return self.data_transform[phase](img)
+        
