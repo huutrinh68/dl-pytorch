@@ -21,7 +21,7 @@ class ImageTransform():
                 transforms.Resize(resize),
                 transforms.ToTensor(),
                 transforms.Normalize(mean, std)
-            ])
+            ]),
         }
     
     def __call__(self, img, phase='train'):
