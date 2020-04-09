@@ -4,3 +4,4 @@
 */*.pth
 */data
 */*/__pycache__
+.vscode
