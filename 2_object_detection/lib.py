@@ -5,6 +5,7 @@ import random
 import xml.etree.ElementTree as ET 
 import cv2 
 import torch
+import torch.nn as nn
 import torch.utils.data as data
 import numpy as np 
 from matplotlib import pyplot as plt
