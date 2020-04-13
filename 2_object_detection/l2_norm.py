@@ -9,8 +9,8 @@ class L2Norm(nn.Module):
         self.reset_parameters()
         self.eps = 1e-10
     
-    def reset_parametes(self):
-        init.constant_(self.weight, self.scale)
+    def reset_parameters(self):
+        nn.init.constant_(self.weight, self.scale)
     
     def forward(self, x):
         # x.size() = (batch_size, chanenel, height, width)
