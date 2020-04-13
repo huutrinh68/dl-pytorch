@@ -1,4 +1,6 @@
 from lib import *
+from l2_norm import L2Norm
+from default_box import DefBox
 
 def create_vgg():
     layers = []
@@ -89,12 +91,45 @@ def create_loc_conf(num_classes=21, bbox_ratio_num=[4, 6, 6, 6, 4, 4]):
     return nn.ModuleList(loc_layers), nn.ModuleList(conf_layers)
 
 
+cfg = {
+    "num_classes": 21, #VOC data include 20 class + 1 background class
+    "input_size": 300, #SSD300
+    "bbox_aspect_num": [4, 6, 6, 6, 4, 4], # Tỷ lệ khung hình cho source1->source6`
+    "feature_maps": [38, 19, 10, 5, 3, 1],
+    "steps": [8, 16, 32, 64, 100, 300], # Size of default box
+    "min_size": [30, 60, 111, 162, 213, 264], # Size of default box
+    "max_size": [60, 111, 162, 213, 264, 315], # Size of default box
+    "aspect_ratios": [[2], [2,3], [2,3], [2,3], [2], [2]]
+}
+
+class SSD(nn.Module):
+    def __init__(self, phase, cfg):
+        super(SSD, self).__init__()
+        self.phase = phase
+        self.num_classes= cfg["num_classes"]
+
+        #create main modules
+        self.vgg = create_vgg()
+        self.extras = create_extras()
+        self.loc, self.conf = create_loc_conf(cfg["num_classes"], cfg["bbox_aspect_num"])
+        self.L2Norm = L2Norm()
+
+        #create default box
+        dbox = DefBox(cfg)
+        self.dbox_list = dbox.create_defbox()
+
+        if phase == "inference":
+            self.detect = Detect()
+
 
 if __name__ == "__main__":
-    vgg = create_vgg()
-    # print(vgg)
-    extras = create_extras()
-    # print(extras)
-    loc, conf = create_loc_conf()
-    print(loc)
-    print(conf)
+    # vgg = create_vgg()
+    # # print(vgg)
+    # extras = create_extras()
+    # # print(extras)
+    # loc, conf = create_loc_conf()
+    # print(loc)
+    # print(conf)
+
+    ssd = SSD(phase="train", cfg=cfg)
+    print(ssd)
