@@ -141,6 +141,93 @@ def decode(loc, defbox_list):
 
     return boxes
 
+# non-maximum_supression
+def nms(boxes, scores, overlap=0.45, top_k=200):
+    """
+    boxes: [num_box, 4]
+    scores: [num_box]
+    """
+    count = 0
+    keep = scores.new(scores.size(0)).zero_().long()
+
+    # boxes coordinate
+    x1 = boxes[:, 0]
+    y1 = boxes[:, 1]
+    x2 = boxes[:, 2]
+    y2 = boxes[:, 3]
+
+    # area of boxes
+    area = torch.mul(x2-x1, y2-y1)
+
+    tmp_x1 = boxes.new()
+    tmp_x2 = boxes.new()
+    tmp_y1 = boxes.new()
+    tmp_y2 = boxes.new()
+    tmp_w = boxes.new()
+    tmp_h = boxes.new()
+
+    value, idx = scores.sort(0)
+    idx = idx[-top_k:] # id của top 200 boxes có độ tự tin cao nhất
+
+    while idx.numel() > 0:
+        i = idx[-1] # id của box có độ tự tin cao nhất
+
+        keep[count] = i
+        count += 1
+
+        if id.size(0) == 1:
+            break
+        
+        idx = idx[:-1] #id của boxes ngoại trừ box có độ tự tin cao nhất
+
+        #information boxes
+        torch.index_select(x1, 0, idx, out=tmp_x1) #x1
+        torch.index_select(y1, 0, idx, out=tmp_y1) #y1
+        torch.index_select(x2, 0, idx, out=tmp_x2) #x2
+        torch.index_select(y2, 0, idx, out=tmp_y2) #y2
+
+        tmp_x1 = torch.clamp(tmp_x1, min=x1[i]) # =x1[i] if tmp_x1 < x1[1]
+        tmp_y1 = torch.clamp(tmp_y1, min=y1[i])
+        tmp_x2 = torch.clamp(tmp_x2, max=x2[i])
+        tmp_y2 = torch.clamp(tmp_y2, max=y2[i]) # =y2[i] if tmp_y2 > y2[i]
+        
+        # chuyển về tensor có size mà index được giảm đi 1
+        tmp_w.resize_as_(tmp_x2)
+        tmp_h.resize_as_(tmp_y2)
+
+        tmp_w = tmp_x2 - tmp_x1
+        tmp_h = tmp_y2 - tmp_y1
+
+        tmp_w = torch.clamp(tmp_w, min=0.0)
+        tmp_h = torch.clamp(tmp_h, min=0.0)
+
+        # overlap area
+        inter = tmp_w*tmp_h
+
+        others_area = torch.index_select(area, 0, idx) # diện tích của mỗi bbox
+        union = area[i] + others_area - inter
+
+        iou = inter/union
+
+        idx = idx[iou.le(overlap)] # giữ lại id của box có overlap ít với bbox đang xét
+
+    return keep, count
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
     # vgg = create_vgg()
