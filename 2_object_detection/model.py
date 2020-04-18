@@ -121,6 +121,8 @@ class SSD(nn.Module):
         if phase == "inference":
             self.detect = Detect()
 
+    # def forward()
+
 
 def decode(loc, defbox_list):
     """
@@ -212,6 +214,75 @@ def nms(boxes, scores, overlap=0.45, top_k=200):
         idx = idx[iou.le(overlap)] # giữ lại id của box có overlap ít với bbox đang xét
 
     return keep, count
+
+
+class Detect(Function):
+    def __init__(self, conf_thresh=0.01, top_k=200, nsm_thresh=0.45):
+        self.softmax = nn.Softmax(dim=-1)
+        self.conf_thresh = conf_thresh
+        self.top_k = top_k
+        self.nms_thresh = nsm_thresh
+
+    def forward(self, loc_data, conf_data, dbox_list):
+        num_batch = loc_data.size(0) #batch_size (2,4,6,...32, 64, 128)
+        num_dbox = loc_data.size(1) # 8732
+        num_classe = conf_data.size(2) #21
+
+        conf_data = self.softmax(conf_data) 
+        # (batch_num, num_dbox, num_class) -> (batch_num, num_class, num_dbox)
+        conf_preds = conf_data.transpose(2, 1)
+
+        output = torch.zeros(num_batch, num_classe, self.top_k, 5)
+
+        # xử lý từng bức ảnh trong một batch các bức ảnh
+        for i range(num_batch):
+            # Tính bbox từ offset information và default box
+            decode_boxes = decode(loc_data[i], dbox_list)
+
+            # copy confidence score của ảnh thứ i
+            conf_scores = conf_preds[i].clone()
+
+            for cl in range(1, num_classe):
+                c_mask = conf_preds[cl].gt(self.conf_thresh) # chỉ lấy những confidence > 0.01
+                scores = conf_preds[cl][c_mask]
+
+                if scores.nelement() == 0: #numel()
+                    continue
+
+                # đưa chiều về giống chiều của decode_boxes để tính toán
+                l_mask = c_mask.unsquzee(1).expand_as(decode_boxes) #(8732, 4)
+
+                boxes = decode_boxes[l_mask].view(-1, 4) # (số box có độ tự tin lớn hơn > 0.01, 4)
+
+                ids, count = nms(boxes, scores, self.nms_thresh, self.top_k)
+
+                output[i, cl, :count] = torch.cat((scores[ids[:count]].unsquzee(1), boxes[ids[:count]]), 1)
+
+        return output
+
+
+                
+                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
