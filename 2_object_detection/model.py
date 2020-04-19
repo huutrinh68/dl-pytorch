@@ -152,13 +152,18 @@ class SSD(nn.Module):
             conf.append(c(x).permute(0,2,3,1).contiguous()) 
 
         
+        loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1) #(batch_num, 34928) 8732*4
+        conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1) #(batch_num, 8732*21)
+
+        # convert (batch_num, ?, ?)
         loc = loc.view(loc.size(0), -1, 4) # (batch_num, 8732, 4)
-        conf = conf.view(conf.size(0), -1, self.num_classes) # (batch_num, 8732, 21)
+        conf = conf.view(conf.size(0), -1, 21) #(batch_num, 8732, 21)
 
         output = (loc, conf, self.dbox_list)
 
         if self.phase == "inference":
             return self.detect(output[0], output[1], output[2])
+        
         else:
             return output
 
