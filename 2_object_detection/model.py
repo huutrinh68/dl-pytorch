@@ -121,7 +121,50 @@ class SSD(nn.Module):
         if phase == "inference":
             self.detect = Detect()
 
-    # def forward()
+    def forward(self, x):
+        sources = list()
+        loc = list()
+        conf = list()
+
+        for k in range(23):
+            x = self.vgg[k][x]
+        
+        # source1
+        source1 = self.L2Norm(x)
+        sources.append(source1)
+
+        for k in range(23, len(self.vgg)):
+            x = self.vgg[k](x)
+        # source2
+        sources.append(x)
+
+        # source3~6
+        for k, v in enumerate(self.extras):
+            x = nn.ReLU(v(x), inplace=True)
+            if k %2 == 1:
+                sources.append(x)
+        
+
+        for (x, l, c) in zip(sources, self.loc, self.conf):
+            # aspect_ratio_num = 4, 6
+            # (batch_size, 4*aspect_ratio_num, featuremap_height, featuremap_width)
+            # -> (batch_size, featuremap_height, featuremap_width ,4*aspect_ratio_num)
+            loc.append(l(x).permute(0, 2, 3, 1).contiguous())
+            conf.append(c(x).permute(0, 2, 3, 1).contiguous())
+
+        loc = torch.cat([o.view(o.size(0), -1) for o in loc], 1) #(batch_size, 34928) 4*8732
+        conf = torch.cat([o.view(o.size(0), -1) for o in conf], 1) #(batch_size, 8732*21)
+
+        loc = loc.view(loc.size(0), -1, 4) #(batch_size, 8732, 4)
+        conf = conf.view(conf.size(0), -1, self.num_classes) #(batch_size, 8732, 21)
+
+        output = (loc, conf, self.dbox_list)
+
+        if phase == "inference":
+            return self.detect(output[0], output[1], output[2])
+        else:
+            return output
+
         
 
 
