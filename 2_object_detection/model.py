@@ -121,7 +121,48 @@ class SSD(nn.Module):
         if phase == "inference":
             self.detect = Detect()
 
-    # def forward()
+    def forward(self, x):
+        sources = list()
+        loc = list()
+        conf = list()
+
+        for k in range(23):
+            x = self.vgg[k](x)
+        
+        # create source1
+        source1 = self.L2Norm(x)
+        sources.append(source1)
+
+        for k in range(23, len(self.vgg)):
+            x = self.vgg[k](x)
+        
+        # create source2
+        sources.append(x)
+
+        for k, v in enumerate(self.extras):
+            x = F.ReLU(v(x))
+            if k%2 == 1:
+                sources.append(x)
+
+        for (x, l, c) in zip(sources, self.loc, self.conf):
+            # (batch_num, 4*aspect_ratio_num, featuremap_height, featuremap_width)
+            # convert to (batch_num, featuremap_height, featuremap_width, 4*aspect_ratio_num)
+            # (0, 2, 3, 1)
+            loc.append(l(x).permute(0,2,3,1).contiguous()) 
+            conf.append(c(x).permute(0,2,3,1).contiguous()) 
+
+        
+        loc = loc.view(loc.size(0), -1, 4) # (batch_num, 8732, 4)
+        conf = conf.view(conf.size(0), -1, self.num_classes) # (batch_num, 8732, 21)
+
+        output = (loc, conf, self.dbox_list)
+
+        if self.phase == "inference":
+            return self.detect(output[0], output[1], output[2])
+        else:
+            return output
+
+
 
 
 def decode(loc, defbox_list):
