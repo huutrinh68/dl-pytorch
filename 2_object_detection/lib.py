@@ -7,6 +7,7 @@ import cv2
 import torch
 import torch.nn as nn
 from torch.autograd import Function
+import torch.nn.functional as F
 import torch.utils.data as data
 import numpy as np 
 import pandas as pd
