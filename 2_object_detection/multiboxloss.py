@@ -3,6 +3,8 @@
 # Loss in regression task: MSE ->F.SmoothL1Loss
 # Loss in classification (multi class): F.CrossEntropy
 from lib import *
+from utils.box_utils import match
+
 
 class MultiBoxLoss(nn.Module):
     def __init__(self, jaccard_threshold=0.5, neg_pos=3, device="cpu"):
@@ -17,16 +19,16 @@ class MultiBoxLoss(nn.Module):
         #(batch_num, num_dbox, num_classes)
         num_batch = loc_data.size(0) 
         num_dbox = loc_data.size(1) #8732
-        num_classes = loc_data.size(2)
+        num_classes = conf_data.size(2)
 
-        conf_t_label = torch.LongTensor(num_batch, num_dbox).to(device)
-        loc_t = torch.Tensor(num_batch, num_dbox, 4)
+        conf_t_label = torch.LongTensor(num_batch, num_dbox).to(self.device)
+        loc_t = torch.Tensor(num_batch, num_dbox, 4).to(self.device)
 
         for idx in range(num_batch):
-            truths = targets[idx][:, :, :-1].to(device) #(xmin, ymin, xmax, ymax) BBox
-            labels = targets[idx][:, -1].to(device) #label
+            truths = targets[idx][:, :-1].to(self.device) #(xmin, ymin, xmax, ymax) BBox
+            labels = targets[idx][:, -1].to(self.device) #label
 
-            dbox = dbox_list.to(device)
+            dbox = dbox_list.to(self.device)
             variances = [0.1, 0.2]
             match(self.jaccard_threshold, truths, dbox, variances, labels, loc_t, conf_t_label, idx)
 
@@ -44,7 +46,7 @@ class MultiBoxLoss(nn.Module):
         #loss_conf
         #CrossEntropy
         batch_conf = conf_data.view(-1, num_classes) #(num_batch*num_box, num_classes)
-        loss_conf = F.cross_entropy(batch_conf, conf_t_label, reduction="none")
+        loss_conf = F.cross_entropy(batch_conf, conf_t_label.view(-1), reduction="none")
 
         # hard negative mining
         num_pos = pos_mask.long().sum(1, keepdim=True)
@@ -54,7 +56,7 @@ class MultiBoxLoss(nn.Module):
         _, idx_rank = loss_idx.sort(1)
         # idx_rank chính là thông số để biết được độ lớn loss nằm ở vị trí bao nhiêu
 
-        num_neg = torch.(num_pos*self.neg_pos, max=num_pos)
+        num_neg = torch.clamp(num_pos*self.neg_pos, max=num_dbox)
 
         neg_mask = idx_rank < (num_neg).expand_as(idx_rank)
 
@@ -62,9 +64,9 @@ class MultiBoxLoss(nn.Module):
         pos_idx_mask = pos_mask.unsqueeze(2).expand_as(conf_data)
         neg_idx_mask = neg_mask.unsqueeze(2).expand_as(conf_data)
 
-        conf_t_pre = conf_data[((pos_idx_mask+neg_idx_mask).gt(0)].view(-1, num_classes)
+        conf_t_pre = conf_data[(pos_idx_mask+neg_idx_mask).gt(0)].view(-1, num_classes)
 
-        conf_t_label_ = conf_t_label[(pos_idx_mask+neg_idx_mask).gt(0)]
+        conf_t_label_ = conf_t_label[(pos_mask+neg_mask).gt(0)]
         
         loss_conf = F.cross_entropy(conf_t_pre, conf_t_label_, reduction="sum")
 
