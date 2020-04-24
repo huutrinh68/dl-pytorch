@@ -127,7 +127,7 @@ class SSD(nn.Module):
         conf = list()
 
         for k in range(23):
-            x = self.vgg[k][x]
+            x = self.vgg[k](x)
         
         # source1
         source1 = self.L2Norm(x)
@@ -140,7 +140,7 @@ class SSD(nn.Module):
 
         # source3~6
         for k, v in enumerate(self.extras):
-            x = nn.ReLU(v(x), inplace=True)
+            x = F.relu(v(x), inplace=True)
             if k %2 == 1:
                 sources.append(x)
         
@@ -160,7 +160,7 @@ class SSD(nn.Module):
 
         output = (loc, conf, self.dbox_list)
 
-        if phase == "inference":
+        if self.phase == "inference":
             return self.detect(output[0], output[1], output[2])
         else:
             return output
@@ -295,7 +295,7 @@ class Detect(Function):
         output = torch.zeros(num_batch, num_classe, self.top_k, 5)
 
         # xử lý từng bức ảnh trong một batch các bức ảnh
-        for i range(num_batch):
+        for i in range(num_batch):
             # Tính bbox từ offset information và default box
             decode_boxes = decode(loc_data[i], dbox_list)
 
