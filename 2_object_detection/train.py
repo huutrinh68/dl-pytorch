@@ -12,6 +12,7 @@ from extract_inform_annotation import Anno_xml
 from model import SSD
 from multiboxloss import MultiBoxLoss
 
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("device:", device)
 torch.backends.cudnn.benchmark = True
@@ -112,22 +113,18 @@ def train_model(net, dataloader_dict, criterion, optimizer, num_epochs):
                 # forward
                 with torch.set_grad_enabled(phase=="train"):
                     outputs = net(images)
-
                     loss_l, loss_c = criterion(outputs, targets)
                     loss = loss_l + loss_c
 
                     if phase == "train":
                         loss.backward() # calculate gradient
-
                         nn.utils.clip_grad_value_(net.parameters(), clip_value=2.0)
-
                         optimizer.step() # update parameters
 
                         if (iteration % 10) == 0:
                             t_iter_end = time.time()
                             duration = t_iter_end - t_iter_start
                             print("Iteration {} || Loss: {:.4f} || 10iter: {:.4f} sec".format(iteration, loss.item(), duration))
-
                             t_iter_start = time.time()
                         
                         epoch_train_loss += loss.item()
@@ -153,5 +150,5 @@ def train_model(net, dataloader_dict, criterion, optimizer, num_epochs):
         if ((epoch+1) % 10 == 0):
             torch.save(net.state_dict(), "./data/weights/ssd300_" + str(epoch+1) + ".pth")
 
-num_epochs = 30
+num_epochs = 50
 train_model(net, dataloader_dict, criterion, optimizer, num_epochs=num_epochs)

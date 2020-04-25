@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Function
 import torch.nn.functional as F
+import torch.optim as optim
 import torch.utils.data as data
 import numpy as np 
 import pandas as pd
