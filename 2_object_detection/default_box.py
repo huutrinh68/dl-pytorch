@@ -48,6 +48,7 @@ class DefBox():
 
         return output
 
+
 if __name__ == "__main__":
     defbox = DefBox(cfg)
     dbox_list = defbox.create_defbox()
