@@ -28,8 +28,8 @@ class DefBox():
         for k, f in enumerate(self.feature_maps):
             for i, j in itertools.product(range(f), repeat=2):
                 f_k = self.img_size / self.steps[k]
-                cx = (i+0.5)/f_k
-                cy = (j+0.5)/f_k
+                cx = (j+0.5)/f_k
+                cy = (i+0.5)/f_k
 
                 # small square box 
                 s_k = self.min_size[k]/self.img_size #first case: 30/300

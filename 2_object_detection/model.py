@@ -24,9 +24,7 @@ def create_vgg():
     pool5 = nn.MaxPool2d(kernel_size=3, stride=1, padding=1)
     conv6 = nn.Conv2d(512, 1024, kernel_size=3, padding=6, dilation=6)
     conv7 = nn.Conv2d(1024, 1024, kernel_size=1)
-
     layers += [pool5, conv6, nn.ReLU(inplace=True), conv7, nn.ReLU(inplace=True)]
-
 
     return nn.ModuleList(layers)
 
@@ -34,7 +32,6 @@ def create_vgg():
 def create_extras():
     layers = []
     in_channels = 1024
-
     cfgs = [256, 512, 128, 256, 128, 256, 128, 256]
 
     layers += [nn.Conv2d(in_channels, cfgs[0], kernel_size=1)]
@@ -48,45 +45,45 @@ def create_extras():
 
     return nn.ModuleList(layers)
 
-def create_loc_conf(num_classes=21, bbox_ratio_num=[4, 6, 6, 6, 4, 4]):
+def create_loc_conf(num_classes=21, bbox_aspect_num=[4, 6, 6, 6, 4, 4]):
     loc_layers = []
     conf_layers = []
 
     # source1
     # loc
-    loc_layers += [nn.Conv2d(512, bbox_ratio_num[0]*4, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(512, bbox_aspect_num[0]*4, kernel_size=3, padding=1)]
     # conf
-    conf_layers += [nn.Conv2d(512, bbox_ratio_num[0]*num_classes, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(512, bbox_aspect_num[0]*num_classes, kernel_size=3, padding=1)]
 
     #source2
     #loc
-    loc_layers += [nn.Conv2d(1024, bbox_ratio_num[1]*4, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(1024, bbox_aspect_num[1]*4, kernel_size=3, padding=1)]
     #conf
-    conf_layers += [nn.Conv2d(1024, bbox_ratio_num[1]*21, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(1024, bbox_aspect_num[1]*num_classes, kernel_size=3, padding=1)]
 
     #source3
     #loc
-    loc_layers += [nn.Conv2d(512, bbox_ratio_num[2]*4, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(512, bbox_aspect_num[2]*4, kernel_size=3, padding=1)]
     #conf 
-    conf_layers += [nn.Conv2d(512, bbox_ratio_num[2]*21, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(512, bbox_aspect_num[2]*num_classes, kernel_size=3, padding=1)]
 
     #source4
     #loc
-    loc_layers += [nn.Conv2d(256, bbox_ratio_num[3]*4, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, bbox_aspect_num[3]*4, kernel_size=3, padding=1)]
     #conf 
-    conf_layers += [nn.Conv2d(256, bbox_ratio_num[3]*21, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, bbox_aspect_num[3]*num_classes, kernel_size=3, padding=1)]
 
     #source5
     #loc
-    loc_layers += [nn.Conv2d(256, bbox_ratio_num[4]*4, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, bbox_aspect_num[4]*4, kernel_size=3, padding=1)]
     #conf 
-    conf_layers += [nn.Conv2d(256, bbox_ratio_num[4]*21, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, bbox_aspect_num[4]*num_classes, kernel_size=3, padding=1)]
 
     #source6
     #loc
-    loc_layers += [nn.Conv2d(256, bbox_ratio_num[5]*4, kernel_size=3, padding=1)]
+    loc_layers += [nn.Conv2d(256, bbox_aspect_num[5]*4, kernel_size=3, padding=1)]
     #conf 
-    conf_layers += [nn.Conv2d(256, bbox_ratio_num[5]*21, kernel_size=3, padding=1)]
+    conf_layers += [nn.Conv2d(256, bbox_aspect_num[5]*num_classes, kernel_size=3, padding=1)]
 
     return nn.ModuleList(loc_layers), nn.ModuleList(conf_layers)
 
@@ -164,25 +161,6 @@ class SSD(nn.Module):
             return self.detect(output[0], output[1], output[2])
         else:
             return output
-
-        
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-
-
 
 def decode(loc, defbox_list):
     """
@@ -321,45 +299,6 @@ class Detect(Function):
         return output
 
 
-                
-                
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 if __name__ == "__main__":
     # vgg = create_vgg()
     # # print(vgg)
@@ -369,5 +308,5 @@ if __name__ == "__main__":
     # print(loc)
     # print(conf)
 
-    ssd = SSD(phase="train", cfg=cfg)
-    print(ssd)
+    # ssd = SSD(phase="train", cfg=cfg)
+    # print(ssd)

@@ -21,12 +21,4 @@ class L2Norm(nn.Module):
         weights = self.weight.unsqueeze(0).unsqueeze(2).unsqueeze(3).expand_as(x)
 
         return weights*x
-
-
-
-
-
-
-
-
-
+        
