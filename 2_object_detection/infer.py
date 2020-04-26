@@ -1,7 +1,6 @@
 from lib import *
 from model import SSD
 from transform import DataTransform
-from show_result import SSDPredictShow
 
 
 voc_classes = ['aeroplane', 'bicycle', 'bird', 'boat',
@@ -9,7 +8,6 @@ voc_classes = ['aeroplane', 'bicycle', 'bird', 'boat',
     'cow', 'diningtable', 'dog', 'horse',
     'motorbike', 'person', 'pottedplant',
     'sheep', 'sofa', 'train', 'tvmonitor']
-
 
 # network
 cfg = {
@@ -24,55 +22,54 @@ cfg = {
 }
 
 net = SSD(phase="inference", cfg=cfg)
-# SSD の学習済みの重みを設定
-net_weights = torch.load('./data/weights/ssd300_50.pth', map_location={'cuda:0': 'cpu'})
-
+net_weights = torch.load('./data/weights/ssd300_100.pth', map_location={'cuda:0': 'cpu'})
 net.load_state_dict(net_weights)
 
+def show_predict(image_file_path):
+    img = cv2.imread(image_file_path)
+    height, width, channels = img.shape 
 
-image_file_path = "./data/cowboy-757575_640.jpg"
-img = cv2.imread(image_file_path) # [ 高さ ][ 幅 ][ 色 BGR]
-height, width, channels = img.shape # 画像のサイズを取得
-# 2. 元画像の表示
-plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-plt.show()
-# 3. 前処理クラスの作成
-color_mean = (104, 117, 123) # (BGR) の色の平均値
-input_size = 300 # 画像の input サイズを 300 300 にする
-transform = DataTransform(input_size, color_mean)
+    color_mean = (104, 117, 123) # (BGR) mean channel
+    input_size = 300
+    transform = DataTransform(input_size, color_mean)
 
-phase = "val"
-img_transformed, boxes, labels = transform(img, phase, "", "") # アノテーションはないので、"" にする
-img_tensor = torch.from_numpy(img_transformed[:, :, (2, 1, 0)]).permute(2, 0, 1)
+    phase = "val"
+    img_transformed, boxes, labels = transform(img, phase, "", "") 
+    img_tensor = torch.from_numpy(img_transformed[:, :, (2, 1, 0)]).permute(2, 0, 1)
 
-net.eval() # ネットワークを推論モードへ
-x = img_tensor.unsqueeze(0) # ミニバッチ化:torch.Size([1, 3, 300, 300])
-detection = net(x)
-# print(detections.shape)
-# print(detections)
+    net.eval()
+    input = img_tensor.unsqueeze(0) #(1, 3, 300, 300)
+    output = net(input)
 
+    plt.figure(figsize=(10,10))
+    colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+    fonts = cv2.FONT_HERSHEY_SIMPLEX
 
-# ssd = SSDPredictShow(eval_categories=voc_classes, net=net)
-# ssd.show(image_file_path, data_confidence_level=0.6)
-top_k=10
+    detections = output.data
+    
+    # scale each detection back up to the image
+    print(img.shape[1::-1])
+    scale = torch.Tensor(img.shape[1::-1]).repeat(2)
+    print(detections.shape)
+    for i in range(detections.size(1)):
+        j = 0
+        while detections[0, i, j, 0] >= 0.6:
+            score = detections[0, i, j, 0]
+            pt = (detections[0, i, j, 1:] * scale).cpu().numpy()
+            cv2.rectangle(img,
+                            (int(pt[0]), int(pt[1])),
+                            (int(pt[2]), int(pt[3])),
+                            colors[i % 3], 2)
+            display_txt = '%s: %.2f'%(voc_classes[i - 1], score)
+            cv2.putText(img, display_txt, (int(pt[0]), int(pt[1])),
+                        fonts, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
+            j += 1
 
-plt.figure(figsize=(10,10))
-colors = plt.cm.hsv(np.linspace(0, 1, 21)).tolist()
-plt.imshow(img)  # plot the image for matplotlib
-currentAxis = plt.gca()
+    cv2.imshow('Result', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
-detections = detection.data
-# scale each detection back up to the image
-scale = torch.Tensor(img.shape[1::-1]).repeat(2)
-for i in range(detections.size(1)):
-    j = 0
-    while detections[0,i,j,0] >= 0.01:
-        score = detections[0,i,j,0]
-        label_name = voc_classes[i-1]
-        display_txt = '%s: %.2f'%(label_name, score)
-        pt = (detections[0,i,j,1:]*scale).cpu().numpy()
-        coords = (pt[0], pt[1]), pt[2]-pt[0]+1, pt[3]-pt[1]+1
-        color = colors[i]
-        currentAxis.add_patch(plt.Rectangle(*coords, fill=False, edgecolor=color, linewidth=2))
-        currentAxis.text(pt[0], pt[1], display_txt, bbox={'facecolor':color, 'alpha':0.5})
-        j+=1
+if __name__ == "__main__":
+    image_file_path = "./data/cowboy.jpg"
+    show_predict(image_file_path)
+    
