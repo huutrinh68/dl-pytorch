@@ -2,6 +2,7 @@ from lib import *
 from l2_norm import L2Norm
 from default_box import DefBox
 
+
 def create_vgg():
     layers = []
     in_channels = 3
@@ -44,6 +45,7 @@ def create_extras():
     layers += [nn.Conv2d(cfgs[6], cfgs[7], kernel_size=3)]
 
     return nn.ModuleList(layers)
+
 
 def create_loc_conf(num_classes=21, bbox_aspect_num=[4, 6, 6, 6, 4, 4]):
     loc_layers = []
@@ -98,6 +100,7 @@ cfg = {
     "max_size": [60, 111, 162, 213, 264, 315], # Size of default box
     "aspect_ratios": [[2], [2,3], [2,3], [2,3], [2], [2]]
 }
+
 
 class SSD(nn.Module):
     def __init__(self, phase, cfg):
@@ -162,6 +165,7 @@ class SSD(nn.Module):
         else:
             return output
 
+
 def decode(loc, defbox_list):
     """
     parameters:
@@ -180,6 +184,7 @@ def decode(loc, defbox_list):
     boxes[:, 2:] += boxes[:, :2] #calculate xmax, ymax
 
     return boxes
+
 
 # non-maximum_supression
 def nms(boxes, scores, overlap=0.45, top_k=200):
@@ -211,15 +216,13 @@ def nms(boxes, scores, overlap=0.45, top_k=200):
 
     while idx.numel() > 0:
         i = idx[-1] # id của box có độ tự tin cao nhất
-
         keep[count] = i
         count += 1
 
-        if id.size(0) == 1:
+        if idx.size(0) == 1:
             break
         
         idx = idx[:-1] #id của boxes ngoại trừ box có độ tự tin cao nhất
-
         #information boxes
         torch.index_select(x1, 0, idx, out=tmp_x1) #x1
         torch.index_select(y1, 0, idx, out=tmp_y1) #y1
@@ -243,12 +246,9 @@ def nms(boxes, scores, overlap=0.45, top_k=200):
 
         # overlap area
         inter = tmp_w*tmp_h
-
         others_area = torch.index_select(area, 0, idx) # diện tích của mỗi bbox
         union = area[i] + others_area - inter
-
         iou = inter/union
-
         idx = idx[iou.le(overlap)] # giữ lại id của box có overlap ít với bbox đang xét
 
     return keep, count
@@ -281,20 +281,16 @@ class Detect(Function):
             conf_scores = conf_preds[i].clone()
 
             for cl in range(1, num_classe):
-                c_mask = conf_preds[cl].gt(self.conf_thresh) # chỉ lấy những confidence > 0.01
-                scores = conf_preds[cl][c_mask]
-
+                c_mask = conf_scores[cl].gt(self.conf_thresh) # chỉ lấy những confidence > 0.01
+                scores = conf_scores[cl][c_mask]
                 if scores.nelement() == 0: #numel()
                     continue
 
                 # đưa chiều về giống chiều của decode_boxes để tính toán
-                l_mask = c_mask.unsquzee(1).expand_as(decode_boxes) #(8732, 4)
-
+                l_mask = c_mask.unsqueeze(1).expand_as(decode_boxes) #(8732, 4)
                 boxes = decode_boxes[l_mask].view(-1, 4) # (số box có độ tự tin lớn hơn > 0.01, 4)
-
                 ids, count = nms(boxes, scores, self.nms_thresh, self.top_k)
-
-                output[i, cl, :count] = torch.cat((scores[ids[:count]].unsquzee(1), boxes[ids[:count]]), 1)
+                output[i, cl, :count] = torch.cat((scores[ids[:count]].unsqueeze(1), boxes[ids[:count]]), 1)
 
         return output
 
@@ -308,5 +304,5 @@ if __name__ == "__main__":
     # print(loc)
     # print(conf)
 
-    # ssd = SSD(phase="train", cfg=cfg)
-    # print(ssd)
+    ssd = SSD(phase="train", cfg=cfg)
+    print(ssd)
