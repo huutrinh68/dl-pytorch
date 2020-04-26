@@ -40,7 +40,6 @@ class MultiBoxLoss(nn.Module):
         # positive dbox, loc_data
         loc_p = loc_data[pos_idx].view(-1, 4)
         loc_t = loc_t[pos_idx].view(-1, 4)
-
         loss_loc = F.smooth_l1_loss(loc_p, loc_t, reduction="sum")
 
         #loss_conf
@@ -57,45 +56,19 @@ class MultiBoxLoss(nn.Module):
         # idx_rank chính là thông số để biết được độ lớn loss nằm ở vị trí bao nhiêu
 
         num_neg = torch.clamp(num_pos*self.neg_pos, max=num_dbox)
-
         neg_mask = idx_rank < (num_neg).expand_as(idx_rank)
 
         #(num_batch, 8732) -> (num_batch, 8732, 21)
         pos_idx_mask = pos_mask.unsqueeze(2).expand_as(conf_data)
         neg_idx_mask = neg_mask.unsqueeze(2).expand_as(conf_data)
-
         conf_t_pre = conf_data[(pos_idx_mask+neg_idx_mask).gt(0)].view(-1, num_classes)
-
         conf_t_label_ = conf_t_label[(pos_mask+neg_mask).gt(0)]
-        
         loss_conf = F.cross_entropy(conf_t_pre, conf_t_label_, reduction="sum")
 
         # total loss = loss_loc + loss_conf
-
         N = num_pos.sum()
         loss_loc = loss_loc/N
         loss_conf = loss_conf/N
 
         return loss_loc, loss_conf
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        
