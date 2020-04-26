@@ -92,12 +92,3 @@ if __name__ == "__main__":
     print(images.size()) 
     print(len(targets))
     print(targets[0].size()) # xmin, ymin, xmax, ymax, label
-
-
-
-
-
-
-
-
-
