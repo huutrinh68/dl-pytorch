@@ -21,3 +21,6 @@ import time
 torch.manual_seed(1234)
 np.random.seed(1234)
 random.seed(1234)
+
+import warnings
+warnings.filterwarnings("ignore")
