@@ -58,7 +58,6 @@ def show_predict(img_file_path):
             display_text = "%s: %.2f"%(classes[i-1], score)
             cv2.putText(img, display_text, (int(pt[0]), int(pt[1])),
                 font, 0.5, (255, 255, 255), 1, cv2.LINE_AA)
-
             j += 1
     
     cv2.imshow("Result", img)
@@ -69,9 +68,3 @@ def show_predict(img_file_path):
 if __name__ == "__main__":
     img_file_path = "./data/cowboy.jpg"
     show_predict(img_file_path)
-
-
-
-
-
-
