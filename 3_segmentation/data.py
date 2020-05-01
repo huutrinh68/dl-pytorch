@@ -35,6 +35,26 @@ def make_datapath_list(rootpath):
     return train_img_list, train_anno_list, val_img_list, val_anno_list
 
 
+class DataTransform():
+    def __init__(self, input_size, color_mean, color_std):
+        self.data_transform = {
+            "train": Compose([
+                Scale(scale=[0.5, 1.5]),
+                RandomRotation(angle=[-10, 10]),
+                RandomMirror(),
+                Resize(input_size),
+                Normalize_Tensor(color_mean, color_std)
+                ]),
+            "val": Compose([
+                Resize(input_size),
+                Normalize_Tensor(color_mean, color_std)
+            ])
+        }
+    
+    def __call__(self, phase, img, anno_class_img):
+        return self.data_transform[phase](img, anno_class_img)
+        
+
 if __name__ == "__main__":
     rootpath = "./data/VOCdevkit/VOC2012/"
     train_img_list, train_anno_list, val_img_list, val_anno_list = make_datapath_list(rootpath)
@@ -44,8 +64,4 @@ if __name__ == "__main__":
 
     print(train_img_list[0]) #path of original image (RGB)
     print(train_anno_list[0]) #path of segmentation image (Color pallet)
-
-
-
-
 
