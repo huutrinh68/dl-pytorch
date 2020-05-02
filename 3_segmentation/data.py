@@ -1,4 +1,5 @@
 import os.path as osp
+from utils.augmentation import Compose, Scale, RandomRotation, RandomMirror, Resize, Normalize_Tensor
 
 def make_datapath_list(rootpath):
     original_image_template = osp.join(rootpath, 'JPEGImages', '%s.jpg')
