@@ -1,5 +1,5 @@
 import torch 
-from torchvision import transform
+from torchvision import transforms
 from PIL import Image, ImageOps, ImageFilter
 import numpy as np 
 
@@ -18,7 +18,7 @@ class Scale(object):
     def __init__(self, scale):
         self.scale = scale
 
-    def __cal__(self, img, anno_class_img):
+    def __call__(self, img, anno_class_img):
         width = img.size[0]
         height = img.size[1] 
 
@@ -27,7 +27,7 @@ class Scale(object):
         scale_w = int(width*scale)
         scale_h = int(height*scale)
 
-        anno_class_img = anno_class_img.resize(scale_w, scale_h, Image.NEAREST)
+        anno_class_img = anno_class_img.resize((scale_w, scale_h), Image.NEAREST)
 
         if scale > 1.0:
             left = scale_w - width
@@ -36,8 +36,8 @@ class Scale(object):
             top = scale_h - height
             top = int(np.random.uniform(0, top))
 
-            img = img.crop(left, top, left+width, top+height)
-            anno_class_img = anno_class_img.crop(left, top, left+width, top+height)
+            img = img.crop((left, top, left+width, top+height))
+            anno_class_img = anno_class_img.crop((left, top, left+width, top+height))
         
         else:
             p_palette = anno_class_img.copy().getpalette()
@@ -89,8 +89,8 @@ class Resize(object):
         self.input_size = input_size
     
     def __call__(self, img, anno_class_img):
-        img = img.resize(self.input_size, self.input_size, Image.BILINEAR)
-        anno_class_img = anno_class_img.resize(self.input_size, self.input_size, Image.NEAREST)
+        img = img.resize((self.input_size, self.input_size), Image.BILINEAR)
+        anno_class_img = anno_class_img.resize((self.input_size, self.input_size), Image.NEAREST)
 
         return img, anno_class_img
 
@@ -100,9 +100,8 @@ class Normalize_Tensor(object):
         self.color_std = color_std
 
     def __call__(self, img, anno_class_img):
-        img = transform.functional.to_tensor(img)
-
-        img = transform.functional.nornalize(img, self.color_mean, self.color_std)
+        img = transforms.functional.to_tensor(img)
+        img = transforms.functional.normalize(img, self.color_mean, self.color_std)
 
         anno_class_img = np.array(anno_class_img)
         # ambigious(255)white -> (0)black
