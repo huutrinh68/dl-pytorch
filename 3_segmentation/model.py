@@ -47,6 +47,18 @@ class FeatureMap_convolution(nn.Module):
         return outputs
 
 
+class ResidualBlockPSP(nn.Sequential):
+    def __init__(self, n_blocks, in_channels, out_channels, stride, dilation):
+        super(ResidualBlockPSP, self).__init__()
+
+        # bottleNeckPSP
+        self.add_module("block1", bottleNeckPSP(in_channels, mid_channels, out_channels, stride, dilation))
+
+        for i in range(n_blocks -1):
+            self.add_module("block" + str(i+2), bottleNeckIdentifyPSP(out_channels, mid_channels, stride, dilation))
+
+
+
 
 if __name__ == "__main__":
     x = torch.randn(1, 3, 475, 475)
