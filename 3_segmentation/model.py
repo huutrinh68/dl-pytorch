@@ -6,7 +6,7 @@ import torch.nn.functional as F
 class conv2DBatchNormRelu(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride, padding, dilation, bias):
         super(conv2DBatchNormRelu, self).__init__()
-        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation, bias=bias)
 
         self.batchnorm = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU(inplace=True)
@@ -49,7 +49,7 @@ class FeatureMap_convolution(nn.Module):
 
 
 class ResidualBlockPSP(nn.Sequential):
-    def __init__(self, n_blocks, in_channels, out_channels, stride, dilation):
+    def __init__(self, n_blocks, in_channels, mid_channels, out_channels, stride, dilation):
         super(ResidualBlockPSP, self).__init__()
 
         # bottleNeckPSP
@@ -78,14 +78,14 @@ class bottleNeckPSP(nn.Module):
 
         self.cbr_1 = conv2DBatchNormRelu(in_channels, mid_channels, kernel_size=1, stride=1, padding=0, dilation=1, bias=False)
         self.cbr_2 = conv2DBatchNormRelu(mid_channels, mid_channels, kernel_size=3, stride=stride, padding=dilation, dilation=dilation, bias=False)
-        self.cb_3 = conv2DBatchNorm(mid_channels, outputs, kernel_size=1, stride=1, padding=0, dilation=1, bias=False)
+        self.cb_3 = conv2DBatchNorm(mid_channels, out_channels, kernel_size=1, stride=1, padding=0, dilation=1, bias=False)
 
         # skip connection
         self.cb_residual = conv2DBatchNorm(in_channels, out_channels, kernel_size=1, stride=stride, padding=0, dilation=1, bias=False)
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        conv = sefl.cb_3(self.cbr_2(self.cbr_1(x)))
+        conv = self.cb_3(self.cbr_2(self.cbr_1(x)))
         residual = self.cb_residual(x)
 
         return self.relu(conv + residual)
@@ -101,7 +101,7 @@ class bottleNeckIdentifyPSP(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        conv = self.cb_3(sefl.cbr_2(self.cbr_1(x)))
+        conv = self.cb_3(self.cbr_2(self.cbr_1(x)))
         residual = x
 
         return self.relu(conv + residual)
@@ -139,7 +139,7 @@ class PyramidPooling(nn.Module):
         out3 = self.cbr_3(self.avpool_3(x))
         out3 = F.interpolate(out3, size=(self.height, self.width), mode='bilinear', align_corners=True)
 
-        out4 = self.cbr_4(self.avpool_2(x))
+        out4 = self.cbr_4(self.avpool_4(x))
         out4 = F.interpolate(out4, size=(self.height, self.width), mode='bilinear', align_corners=True)
 
         output = torch.cat([x, out1, out2, out3, out4], dim=1)
@@ -156,7 +156,7 @@ class DecodePSPFeature(nn.Module):
 
         self.cbr = conv2DBatchNormRelu(in_channels=4096, out_channels=512, kernel_size=3, stride=1, padding=1, dilation=1, bias=False)
         self.dropout = nn.Dropout(p=0.1)
-        self.classification = nn.Conv2d(in_channels=512, out_channels=n_classes, kernel_size=1, stride=1, paddding=0)
+        self.classification = nn.Conv2d(in_channels=512, out_channels=n_classes, kernel_size=1, stride=1, padding=0)
 
     def forward(self, x):
         x = self.cbr(x)
@@ -179,18 +179,64 @@ class AuxilirayPSPLayers(nn.Module):
         self.dropout = nn.Dropout(p=0.1)
         self.classification = nn.Conv2d(in_channels=256, out_channels=n_classes, kernel_size=1, stride=1, padding=0)
 
-        def forward(self, x):
-            x = self.cbr(x)
-            x = self.dropout(x)
-            x = self.classification(x)
-            output = F.interpolate(x, size=(self.height, self.width), mode="bilinear", align_corners=True)
-            
-            return  output
+    def forward(self, x):
+        x = self.cbr(x)
+        x = self.dropout(x)
+        x = self.classification(x)
+        output = F.interpolate(x, size=(self.height, self.width), mode="bilinear", align_corners=True)
+        
+        return  output
+
+
+class PSPNet(nn.Module):
+    def __init__(self, n_classes):
+        super(PSPNet, self).__init__()
+
+        # parameters
+        block_config = [3, 4, 6, 3]
+        img_size = 475
+        img_size_8 = 60
+
+        # feature module
+        self.feature_conv = FeatureMap_convolution()
+        self.feature_res_1 = ResidualBlockPSP(n_blocks=block_config[0], in_channels=128, mid_channels=64, out_channels=256, stride=1, dilation=1)
+        self.feature_res_2 = ResidualBlockPSP(n_blocks=block_config[1], in_channels=256, mid_channels=128, out_channels=512, stride=2, dilation=1)
+        self.feature_dilated_res_1 = ResidualBlockPSP(n_blocks=block_config[2], in_channels=512, mid_channels=256, out_channels=1024, stride=1, dilation=2)
+        self.feature_dilated_res_2 = ResidualBlockPSP(n_blocks=block_config[3], in_channels=1024, mid_channels=512, out_channels=2048, stride=1, dilation=4)
+
+        # pyramid pooling module
+        self.pyramid_pooling = PyramidPooling(in_channels=2048, pool_sizes=[6, 3, 2, 1], height=img_size_8, width=img_size_8)
+        
+        # decode module
+        self.decode_feature = DecodePSPFeature(height=img_size, width=img_size, n_classes=n_classes)
+        
+        # auxloss module
+        self.aux = AuxilirayPSPLayers(in_channels=1024, height=img_size, width=img_size, n_classes=n_classes)
+
+
+    def forward(self, x):
+        x = self.feature_conv(x)
+        x = self.feature_res_1(x)
+        x = self.feature_res_2(x)
+        x = self.feature_dilated_res_1(x)
+        output_aux = self.aux(x) 
+        x = self.feature_dilated_res_2(x)
+        x = self.pyramid_pooling(x)
+        output = self.decode_feature(x)
+
+        return (output, output_aux)
+
 
 
 if __name__ == "__main__":
-    x = torch.randn(1, 3, 475, 475)
-    feature_conv = FeatureMap_convolution()
-    outputs = feature_conv(x)
-    print(outputs.shape) #torch.Size([1, 128, 119, 119])
+    # x = torch.randn(1, 3, 475, 475)
+    # feature_conv = FeatureMap_convolution()
+    # outputs = feature_conv(x)
+    # print(outputs.shape) #torch.Size([1, 128, 119, 119])
+
+    dummy_img = torch.rand(2, 3, 475, 475)
+    net = PSPNet(21)
+    # print(net)
+    outputs = net(dummy_img)
+    print(outputs[0].shape)
 
