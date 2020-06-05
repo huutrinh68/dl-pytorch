@@ -27,6 +27,7 @@ class Scale(object):
         scale_w = int(width*scale)
         scale_h = int(height*scale)
 
+        img = img.resize((scaled_w, scaled_h), Image.BICUBIC)
         anno_class_img = anno_class_img.resize((scale_w, scale_h), Image.NEAREST)
 
         if scale > 1.0:
