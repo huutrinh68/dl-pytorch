@@ -41,7 +41,7 @@ optimizer = optim.SGD([
 
 #scheduler
 def lambda_epoch(epoch):
-    max_epoch = 30
+    max_epoch = 100
     return math.pow(1-epoch/max_epoch, 0.9)
 
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda_epoch, last_epoch=-1)
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     train_dataset = MyDataset(train_img_list, train_anno_list, phase="train", transform=DataTransform(input_size=475, color_mean=color_mean, color_std=color_std))
     val_dataset = MyDataset(val_img_list, val_anno_list, phase="val", transform=DataTransform(input_size=475, color_mean=color_mean, color_std=color_std))
 
-    batch_size = 4
+    batch_size = 12
     train_dataloader = data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_dataloader = data.DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
