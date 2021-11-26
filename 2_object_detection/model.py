@@ -161,7 +161,9 @@ class SSD(nn.Module):
         output = (loc, conf, self.dbox_list)
 
         if self.phase == "inference":
-            return self.detect(output[0], output[1], output[2])
+            # return self.detect(output[0], output[1], output[2]) #  old pytorch
+            with torch.no_grad():
+                return self.detect(output[0], output[1], output[2])
         else:
             return output
 
@@ -254,14 +256,15 @@ def nms(boxes, scores, overlap=0.45, top_k=200):
     return keep, count
 
 
-class Detect(Function):
+class Detect():
     def __init__(self, conf_thresh=0.01, top_k=200, nsm_thresh=0.45):
         self.softmax = nn.Softmax(dim=-1)
         self.conf_thresh = conf_thresh
         self.top_k = top_k
         self.nms_thresh = nsm_thresh
 
-    def forward(self, loc_data, conf_data, dbox_list):
+    def __call__(self, loc_data, conf_data, dbox_list):
+    # def forward(self, loc_data, conf_data, dbox_list): #  Old version pytorch
         num_batch = loc_data.size(0) #batch_size (2,4,6,...32, 64, 128)
         num_dbox = loc_data.size(1) # 8732
         num_classe = conf_data.size(2) #21
